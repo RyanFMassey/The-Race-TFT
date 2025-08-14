@@ -77,6 +77,9 @@ def generate_image(old_summoners, summoners):
         for tier in Rank.iconPath
     }
 
+    hotStreakIcon = Image.open('Imgs/Fire emoji.png').resize((30, 30), resample=Image.BICUBIC)
+    coldStreakIcon = Image.open('Imgs/Skull emoji.png').resize((30, 30), resample=Image.BICUBIC)
+
     crown_holder = min(summoners,key=lambda s: sum(s.recent_placements[:10]) if s.recent_placements else float('inf'))
 
     # Define box parameters
@@ -193,6 +196,22 @@ def generate_image(old_summoners, summoners):
         draw_position_square(draw, x + 1480, y - 130, summoner.recent_placements[7], font_leaderboard_rank)
         draw_position_square(draw, x + 1590, y - 130, summoner.recent_placements[8], font_leaderboard_rank)
         draw_position_square(draw, x + 1700, y - 130, summoner.recent_placements[9], font_leaderboard_rank)
+
+        # Check last 3 placements for streaks
+        recent_three = summoner.recent_placements[:3]
+
+        # Win streak (all top 4)
+        if len(recent_three) == 3 and all(p <= 4 for p in recent_three):
+            print(summoner.name, "is on a win streak")
+            taglineLength = draw.textlength(f"#{summoner.tagline}", font=fontTagline)
+            canvas.paste(hotStreakIcon, (x + 245 + int(nameLength + taglineLength), y - 122), hotStreakIcon)
+            print(x + 245 + int(nameLength + taglineLength), y + 50)
+
+        # Loss streak (all bottom 4)
+        elif len(recent_three) == 3 and all(p >= 5 for p in recent_three):
+            print(summoner.name, "is on a loss streak")
+            taglineLength = draw.textlength(f"#{summoner.tagline}", font=fontTagline)
+            canvas.paste(coldStreakIcon, (x + 245 + int(nameLength + taglineLength), y - 122), coldStreakIcon)
 
         # Draw average placement
         draw_text_centered(canvas, f"{round(sum(summoner.recent_placements[:10]) / 10, 1)}", x + 1860, y - 85, font_average_placement)
