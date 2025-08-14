@@ -14,8 +14,8 @@ from json_util import open_json_file, write_json_file
 # bot = commands.InteractionBot()
 
 matches_json_file = "match_data.json"
-# data_json_file = "test_data.json"
-data_json_file = "data.json"
+data_json_file = "test_data.json"
+# data_json_file = "data.json"
 
 
 def load_match_data(puuids):
@@ -53,7 +53,9 @@ if __name__ == "__main__":
 
     print("Starting...")
 
-    summoner_names = ["Yuudachí#EUW", "Fallon#EUW", "jenks#101", "Dusty#ZZZ", "Doug#WW1T", "HAMOHBAR#EUW", "devyswette#EUW"]
+
+
+    summoner_names = ["Fallon#EUW", "Yuudachí#EUW", "jenks#101", "Dusty#ZZZ", "Doug#WW1T", "HAMOHBAR#EUW", "devyswette#EUW"]
 
     summoners = [Summoner.from_dict(s) for s in open_json_file(data_json_file)]
     if summoners is None:
@@ -76,10 +78,40 @@ if __name__ == "__main__":
     latest_summoners.sort(key=lambda s: (Rank.tierOrder[s.tier], Rank.rankOrder[s.rank], s.lp, int(s.wins / (s.wins + s.losses) * 100)), reverse=True)
 
     # Set the 'position' attribute to their index in the list (1-based index)
+
+    #TODO currently load_match_data requests each summoners recent matches, so does get_recent_match_ids in the summoners loop, should only need one request
+    latest_matches = load_match_data([s.puuid for s in latest_summoners])
+    print(latest_matches)
+    match_lookup = {m.match_id: m for m in latest_matches}
+
     for idx, summoner in enumerate(latest_summoners, start=1):
         summoner.position = idx
+        summoner.recent_match_ids = get_recent_match_ids(summoner.puuid)
+        print(summoner.name, summoner.recent_match_ids)
 
-    latest_matches = load_match_data([s.puuid for s in latest_summoners])
+        placements = []
+        for match_id in summoner.recent_match_ids:
+            match_data = match_lookup.get(match_id)
+            if not match_data:
+                continue
+
+            player_data = next((p for p in match_data.players if p.puuid == summoner.puuid), None)
+            if not player_data:
+                continue
+
+            placements.append(player_data.placement)
+
+
+        summoner.recent_placements = placements
+        print(f"{summoner.name} recent placements: {summoner.recent_placements}")
+
+
+
+
+
+
+    # print(latest_matches)
+
 
     generate_image(summoners, latest_summoners)
 

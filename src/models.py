@@ -11,6 +11,8 @@ class Summoner:
         self.losses = losses
         self.games = wins + losses
         self.win_rate = f"{round(wins / self.games * 100, 1)}%"
+        self.recent_match_ids = None
+        self.recent_placements = None
 
         self.name = name
         self.tagline = tag

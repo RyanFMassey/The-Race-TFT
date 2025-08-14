@@ -16,9 +16,55 @@ def draw_text_centered(canvas, text, x, y, font, colour=(255, 255, 255)):
     draw.text((centerX, centerY), text, colour, font=font)
 
 
+def draw_position_square(draw, x, y, position, font):
+    """
+    Draws a 100x100 rounded square with a number inside.
+    Color rules:
+    - position == 1 → green
+    - 2-4 → blue
+    - 5-8 → white
+    - else → grey
+    """
+
+
+    position_colors = {
+        1: (17, 178, 136),
+        2: (32, 122, 199),
+        3: (32, 122, 199),
+        4: (32, 122, 199),
+        5: (207, 209, 215),
+        6: (207, 209, 215),
+        7: (207, 209, 215),
+        8: (178, 24, 43)
+    }
+
+    square_color = position_colors.get(position)
+    draw.rounded_rectangle((x, y, x + 100, y + 100),radius=20,fill=square_color)
+
+    # Prepare text
+    text = str(position)
+    text_bbox = font.getbbox(text)
+    text_width = text_bbox[2] - text_bbox[0]
+    text_height = text_bbox[3] - text_bbox[1]
+
+    # Center text in square
+    text_x = x + 50 - text_width // 2
+    text_y = y + 35 - text_height // 2
+
+    # Text color rules
+    if square_color == (207, 209, 215):  # gray
+        text_color = (102, 106, 122)
+    else:
+        text_color = (255, 255, 255)
+
+    # Draw text
+    draw.text((text_x, text_y), text, fill=text_color, font=font)
+
+
+
 def generate_image(old_summoners, summoners):
     # Calculate the size of the canvas based on the number of summoners
-    canvas_width = 1820
+    canvas_width = 1920
     canvas_height = (140 * len(summoners) - 20 + 100)
 
     # Create image of rank list on top of background
@@ -31,8 +77,10 @@ def generate_image(old_summoners, summoners):
         for tier in Rank.iconPath
     }
 
+    crown_holder = min(summoners,key=lambda s: sum(s.recent_placements[:10]) if s.recent_placements else float('inf'))
+
     # Define box parameters
-    box_width = 1820
+    box_width = 1920
     box_height = 120
     border_radius = 60
 
@@ -44,6 +92,7 @@ def generate_image(old_summoners, summoners):
     # Write summoners info and tier icons to image
     font_title = ImageFont.truetype("ARIAL.TTF", 120)
     font_leaderboard_rank = ImageFont.truetype("ARIAL.TTF", 70)
+    font_average_placement = ImageFont.truetype("ARIAL.TTF", 50)
     fontName = ImageFont.truetype("ARIAL.TTF", 40)
     fontTagline = ImageFont.truetype("ARIAL.TTF", 16)
     fontTier = ImageFont.truetype("ARIAL.TTF", 32)
@@ -70,22 +119,29 @@ def generate_image(old_summoners, summoners):
         draw.rounded_rectangle(boxPos, border_radius, boxColor, None)
         draw.ellipse((x + 120, y + 10, x + 230, y + 110), fill=circleColor)
         draw.ellipse((x + 10, y + 10, x + 110, y + 110), fill=circleColor)
+        draw.ellipse((x + 1810, y + 10, x + 1910, y + 110), fill=circleColor)
 
         # Draw tier icon
         tierIcon = icons[summoner.tier]
         canvas.paste(tierIcon, (x + 135, y + 20), tierIcon)
+
+        # Draw crown
+        if summoner.puuid == crown_holder.puuid:
+            print("Drawing crown for summoner:", summoner.name)
+            crown = Image.open(f"Imgs/crown.png")
+            canvas.paste(crown, (x + 157, y + 15), crown)
 
         # Draw Delta LP
         if old_summoner is not None:
             old_rank_score = Rank.calculate_score(old_summoner.tier, old_summoner.rank, old_summoner.lp)
             new_rank_score = Rank.calculate_score(summoner.tier, summoner.rank, summoner.lp)
             if old_rank_score != new_rank_score:
-                draw.ellipse((x + 610, y + 10, x + 710, y + 110), fill=circleColor)
+                draw.ellipse((x + 600, y + 10, x + 700, y + 110), fill=circleColor)
                 delta_rank_score = new_rank_score - old_rank_score
                 if delta_rank_score > 0:
                     textBbox = fontName.getbbox(f"+{delta_rank_score}")
                     textWidth = textBbox[2] - textBbox[0]
-                    xCentered = x + 660 - textWidth // 2
+                    xCentered = x + 650 - textWidth // 2
                     draw.text((xCentered, y + 40), f"+{delta_rank_score}", (50, 200, 50), font=fontName)
                 else:
                     textBbox = fontName.getbbox(f"{delta_rank_score}")
@@ -123,8 +179,26 @@ def generate_image(old_summoners, summoners):
         # Increment y position for next summoners
         y += box_height + 20
 
-        draw_text_centered(canvas, "SLASH COMMANDS: /add, /remove", 910, y + 10,
+        draw_text_centered(canvas, "SLASH COMMANDS: /add, /remove", 960, y + 10,
                            fontTier)
+
+        # Draw recent placements
+        draw_position_square(draw, x + 710, y - 130, summoner.recent_placements[0], font_leaderboard_rank)
+        draw_position_square(draw, x + 820, y - 130, summoner.recent_placements[1], font_leaderboard_rank)
+        draw_position_square(draw, x + 930, y - 130, summoner.recent_placements[2], font_leaderboard_rank)
+        draw_position_square(draw, x + 1040, y - 130, summoner.recent_placements[3], font_leaderboard_rank)
+        draw_position_square(draw, x + 1150, y - 130, summoner.recent_placements[4], font_leaderboard_rank)
+        draw_position_square(draw, x + 1260, y - 130, summoner.recent_placements[5], font_leaderboard_rank)
+        draw_position_square(draw, x + 1370, y - 130, summoner.recent_placements[6], font_leaderboard_rank)
+        draw_position_square(draw, x + 1480, y - 130, summoner.recent_placements[7], font_leaderboard_rank)
+        draw_position_square(draw, x + 1590, y - 130, summoner.recent_placements[8], font_leaderboard_rank)
+        draw_position_square(draw, x + 1700, y - 130, summoner.recent_placements[9], font_leaderboard_rank)
+
+        # Draw average placement
+        draw_text_centered(canvas, f"{round(sum(summoner.recent_placements[:10]) / 10, 1)}", x + 1860, y - 85, font_average_placement)
+
+
+
 
     # Save image to file and show it
     canvas.save('Rank list.png')

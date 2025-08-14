@@ -2,7 +2,7 @@ import urllib.parse
 import requests
 from models import Summoner, Match, Player, Trait
 
-api_key = "RGAPI-f10c6953-a0ea-4d8e-9256-973c1e6dece9"
+api_key = "RGAPI-868dbd9e-853d-4828-b60b-b7c7c116a249"
 
 
 def get_puid(summoner_name, tag):
@@ -11,6 +11,7 @@ def get_puid(summoner_name, tag):
     response = requests.get(
         f'https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{url_encoded_name}/{tag}',
         headers={'X-Riot-Token': f'{api_key}'})
+    print('https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{url_encoded_name}/{tag}')
     return response.json()["puuid"]
 
 
@@ -32,7 +33,7 @@ def get_summoner_info(puuid, summoner_name, tag):
 def get_recent_match_ids(puuid):
     print("Getting matches for " + puuid)
     data = []
-    response = requests.get(f'https://europe.api.riotgames.com/tft/match/v1/matches/by-puuid/{puuid}/ids?start=0&count=5&api_key={api_key}')
+    response = requests.get(f'https://europe.api.riotgames.com/tft/match/v1/matches/by-puuid/{puuid}/ids?start=0&count=10&api_key={api_key}')
     if response.status_code == 200:
         data = response.json()
     else:
