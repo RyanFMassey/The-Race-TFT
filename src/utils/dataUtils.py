@@ -32,209 +32,209 @@ def calculateMeanAndStd(data, matchId, stat):
     return np.mean(values), np.std(values)
 
 
-def crownData():
-    summoners = []
-    jsonData = openJsonFile(jsonFile)
-
-    for summonerName in jsonData["summoners"]:
-        allMatchesIds = []
-        summoner = Summoner()
-
-        summoner.fullName = summonerName
-        summoner.puuid = jsonData["summoners"][summonerName]["puuid"]
-        summoner.region = jsonData["summoners"][summonerName]["region"]
-        summoner.platform = jsonData["summoners"][summonerName]["platform"]
-
-        riotApiData = requests.get(f'https://{summoner.region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{summoner.puuid}/ids?queue=420&start=0&count=5&api_key={riotApKey}').json()
-        for i, matchId in enumerate(riotApiData):
-            allMatchesIds.append(matchId)
-            if matchId in jsonData["matchData"]:
-                # print(f"Found {matchId} in json")
-                fetchMatchData(i, summoner, jsonData, matchId)
-            else:
-                # print(f'Fetching {matchId}')
-                success = False
-                matchData = None
-                while not success:
-                    response = requests.get(f'https://{summoner.region}.api.riotgames.com/lol/match/v5/matches/{matchId}?api_key={riotApKey}')
-                    if response.status_code == 200:
-                        matchData = response.json()
-                        success = True
-                    else:
-                        print("No match data, trying again in 125 seconds")
-                        time.sleep(125)
-
-                jsonData["matchData"][matchId] = matchData
-
-                fetchMatchData(i, summoner, jsonData, matchId)
-
-        summoner.MvpScoreTotal = summoner.game1MvpScore + summoner.game2MvpScore + summoner.game3MvpScore + summoner.game4MvpScore + summoner.game5MvpScore
-        summoners.append(summoner)
-
-    summoners.sort(key=lambda s: s.MvpScoreTotal, reverse=True)
-
-    tableData = []
-    for index, summoner in enumerate(summoners, start=1):
-        row = [
-            summoner.fullName,
-            index,
-            round(summoner.MvpScoreTotal, 2),
-            f"{round(summoner.game1MvpScore, 2)}*" if summoner.game1Mvp else round(summoner.game1MvpScore, 2),
-            f"{round(summoner.game2MvpScore, 2)}*" if summoner.game2Mvp else round(summoner.game2MvpScore, 2),
-            f"{round(summoner.game3MvpScore, 2)}*" if summoner.game3Mvp else round(summoner.game3MvpScore, 2),
-            f"{round(summoner.game4MvpScore, 2)}*" if summoner.game4Mvp else round(summoner.game4MvpScore, 2),
-            f"{round(summoner.game5MvpScore, 2)}*" if summoner.game5Mvp else round(summoner.game5MvpScore, 2),
-        ]
-        tableData.append(row)
-
-    # Create the table with the populated data
-    table = t2a(
-        header=["Summoner", "Rank", "Total score", "Game 1 Score", "Game 2 Score", "game 3 Score", "Game 4 Score", "Game 5 Score"],
-        body=tableData,
-        style=PresetStyle.ascii_simple,
-        cell_padding=1
-    )
-
-    with open("crown data.txt", "w", encoding="utf-8") as file:
-        file.write(table)
-
-
-def mvpData(matchId):
-    data = openJsonFile(jsonFile)
-    gameData = []
-
-    # Calculate mean and std
-    meanStdDict = {stat: calculateMeanAndStd(data, matchId, stat) for stat in statisticsForMvp}
-
-    for participant in data["matchData"][matchId]["info"]['participants']:
-        playerChamp = participant['championName']
-        playerName = participant['riotIdGameName']
-        playerTeam = participant['win']
-        zScores = {}
-        originalValues = {}
-        for stat, (mean, std) in meanStdDict.items():
-            if stat in participant['challenges']:
-                originalValue = participant['challenges'][stat]
-                multiplier = statisticsForMvp[stat]
-                zScore = round(calculateZScore(originalValue, multiplier, mean, std), 2)
-            elif stat in participant:
-                originalValue = participant[stat]
-                multiplier = statisticsForMvp[stat]
-                zScore = round(calculateZScore(originalValue, multiplier, mean, std), 2)
-            else:
-                originalValue = 0  # or any default value you prefer if the statistic is missing
-                zScore = 0
-
-            # Use a tuple instead of a lambda function
-            zScores[stat] = (zScore, originalValue)
-            originalValues[stat] = originalValue
-
-        totalZScore = round(sum(z[0] for z in zScores.values()), 2)
-
-        playerData = {
-            "Summoner": playerName,
-            "Champion": playerChamp,
-            "Win": playerTeam,
-            "Total Score": totalZScore,
-            "Z-Scores": zScores,
-            "Original Values": originalValues,
-        }
-        gameData.append(playerData)
-
-    # Sort the gameData list by Total Score in descending order
-    gameData.sort(key=lambda x: x["Total Score"], reverse=True)
-
-    # Add Rank to each player's data
-    for rank, playerData in enumerate(gameData, start=1):
-        playerData["Rank"] = rank
-
-    # Dynamically generate the table header based on statisticsForMvp
-    header = ["Summoner", "Champion", "Win", "Rank", "Total Score"]
-    for stat, multiplier in statisticsForMvp.items():
-        header.append(f"{stat} ({multiplier})")
-
-    table = t2a(
-        header=header,
-        body=[
-            [
-                row["Summoner"],
-                row["Champion"],
-                row["Win"],
-                row["Rank"],
-                row["Total Score"],
-                *(f"{round(row['Z-Scores'][stat][0], 2)} ({round(row['Z-Scores'][stat][1], 2)})" for stat in statisticsForMvp)
-            ]
-            for row in gameData
-        ],
-        style=PresetStyle.ascii_simple,
-        cell_padding=1
-    )
-
-    with open("mvp data.txt", "w", encoding="utf-8") as file:
-        file.write(table)
+# def crownData():
+#     summoners = []
+#     jsonData = openJsonFile(jsonFile)
+#
+#     for summonerName in jsonData["summoners"]:
+#         allMatchesIds = []
+#         summoner = Summoner()
+#
+#         summoner.fullName = summonerName
+#         summoner.puuid = jsonData["summoners"][summonerName]["puuid"]
+#         summoner.region = jsonData["summoners"][summonerName]["region"]
+#         summoner.platform = jsonData["summoners"][summonerName]["platform"]
+#
+#         riotApiData = requests.get(f'https://{summoner.region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{summoner.puuid}/ids?queue=420&start=0&count=5&api_key={riotApKey}').json()
+#         for i, matchId in enumerate(riotApiData):
+#             allMatchesIds.append(matchId)
+#             if matchId in jsonData["matchData"]:
+#                 # print(f"Found {matchId} in json")
+#                 fetchMatchData(i, summoner, jsonData, matchId)
+#             else:
+#                 # print(f'Fetching {matchId}')
+#                 success = False
+#                 matchData = None
+#                 while not success:
+#                     response = requests.get(f'https://{summoner.region}.api.riotgames.com/lol/match/v5/matches/{matchId}?api_key={riotApKey}')
+#                     if response.status_code == 200:
+#                         matchData = response.json()
+#                         success = True
+#                     else:
+#                         print("No match data, trying again in 125 seconds")
+#                         time.sleep(125)
+#
+#                 jsonData["matchData"][matchId] = matchData
+#
+#                 fetchMatchData(i, summoner, jsonData, matchId)
+#
+#         summoner.MvpScoreTotal = summoner.game1MvpScore + summoner.game2MvpScore + summoner.game3MvpScore + summoner.game4MvpScore + summoner.game5MvpScore
+#         summoners.append(summoner)
+#
+#     summoners.sort(key=lambda s: s.MvpScoreTotal, reverse=True)
+#
+#     tableData = []
+#     for index, summoner in enumerate(summoners, start=1):
+#         row = [
+#             summoner.fullName,
+#             index,
+#             round(summoner.MvpScoreTotal, 2),
+#             f"{round(summoner.game1MvpScore, 2)}*" if summoner.game1Mvp else round(summoner.game1MvpScore, 2),
+#             f"{round(summoner.game2MvpScore, 2)}*" if summoner.game2Mvp else round(summoner.game2MvpScore, 2),
+#             f"{round(summoner.game3MvpScore, 2)}*" if summoner.game3Mvp else round(summoner.game3MvpScore, 2),
+#             f"{round(summoner.game4MvpScore, 2)}*" if summoner.game4Mvp else round(summoner.game4MvpScore, 2),
+#             f"{round(summoner.game5MvpScore, 2)}*" if summoner.game5Mvp else round(summoner.game5MvpScore, 2),
+#         ]
+#         tableData.append(row)
+#
+#     # Create the table with the populated data
+#     table = t2a(
+#         header=["Summoner", "Rank", "Total score", "Game 1 Score", "Game 2 Score", "game 3 Score", "Game 4 Score", "Game 5 Score"],
+#         body=tableData,
+#         style=PresetStyle.ascii_simple,
+#         cell_padding=1
+#     )
+#
+#     with open("crown data.txt", "w", encoding="utf-8") as file:
+#         file.write(table)
 
 
-def fetchMatchData(i, summoner, data, matchId):
-    mvpPuuid = None
-    maxZScore = float('-inf')
+# def mvpData(matchId):
+#     data = openJsonFile(jsonFile)
+#     gameData = []
+#
+#     # Calculate mean and std
+#     meanStdDict = {stat: calculateMeanAndStd(data, matchId, stat) for stat in statisticsForMvp}
+#
+#     for participant in data["matchData"][matchId]["info"]['participants']:
+#         playerChamp = participant['championName']
+#         playerName = participant['riotIdGameName']
+#         playerTeam = participant['win']
+#         zScores = {}
+#         originalValues = {}
+#         for stat, (mean, std) in meanStdDict.items():
+#             if stat in participant['challenges']:
+#                 originalValue = participant['challenges'][stat]
+#                 multiplier = statisticsForMvp[stat]
+#                 zScore = round(calculateZScore(originalValue, multiplier, mean, std), 2)
+#             elif stat in participant:
+#                 originalValue = participant[stat]
+#                 multiplier = statisticsForMvp[stat]
+#                 zScore = round(calculateZScore(originalValue, multiplier, mean, std), 2)
+#             else:
+#                 originalValue = 0  # or any default value you prefer if the statistic is missing
+#                 zScore = 0
+#
+#             # Use a tuple instead of a lambda function
+#             zScores[stat] = (zScore, originalValue)
+#             originalValues[stat] = originalValue
+#
+#         totalZScore = round(sum(z[0] for z in zScores.values()), 2)
+#
+#         playerData = {
+#             "Summoner": playerName,
+#             "Champion": playerChamp,
+#             "Win": playerTeam,
+#             "Total Score": totalZScore,
+#             "Z-Scores": zScores,
+#             "Original Values": originalValues,
+#         }
+#         gameData.append(playerData)
+#
+#     # Sort the gameData list by Total Score in descending order
+#     gameData.sort(key=lambda x: x["Total Score"], reverse=True)
+#
+#     # Add Rank to each player's data
+#     for rank, playerData in enumerate(gameData, start=1):
+#         playerData["Rank"] = rank
+#
+#     # Dynamically generate the table header based on statisticsForMvp
+#     header = ["Summoner", "Champion", "Win", "Rank", "Total Score"]
+#     for stat, multiplier in statisticsForMvp.items():
+#         header.append(f"{stat} ({multiplier})")
+#
+#     table = t2a(
+#         header=header,
+#         body=[
+#             [
+#                 row["Summoner"],
+#                 row["Champion"],
+#                 row["Win"],
+#                 row["Rank"],
+#                 row["Total Score"],
+#                 *(f"{round(row['Z-Scores'][stat][0], 2)} ({round(row['Z-Scores'][stat][1], 2)})" for stat in statisticsForMvp)
+#             ]
+#             for row in gameData
+#         ],
+#         style=PresetStyle.ascii_simple,
+#         cell_padding=1
+#     )
+#
+#     with open("mvp data.txt", "w", encoding="utf-8") as file:
+#         file.write(table)
 
-    summoner.__setattr__(f'game{i + 1}GameLength', data["matchData"][matchId]["info"]["gameDuration"])
 
-    # Calculate mean and std for each statistic
-    meanStdDict = {stat: calculateMeanAndStd(data, matchId, stat) for stat in statisticsForMvp}
-
-    for participant in data["matchData"][matchId]["info"]['participants']:
-        playerPuuid = participant['puuid']
-        zScores = {}
-        for stat, (mean, std) in meanStdDict.items():
-            if stat in participant['challenges']:
-                originalValue = participant['challenges'][stat]
-            elif stat in participant:
-                originalValue = participant[stat]
-            else:
-                originalValue = 0  # or any default value you prefer if the statistic is missing
-
-            # Calculate the Z-score using the multiplier from statisticsForMvp
-            zScores[stat] = calculateZScore(originalValue, statisticsForMvp[stat], mean, std)
-
-        totalZScore = sum(zScores.values())
-        if participant['puuid'] == summoner.puuid:
-            summoner.__setattr__(f'game{i + 1}MvpScore', totalZScore)
-
-        # MVP
-        if totalZScore > maxZScore:
-            maxZScore = totalZScore
-            mvpPuuid = playerPuuid
-
-        if participant['puuid'] == summoner.puuid:
-            summoner.__setattr__(f'game{i + 1}Champion', participant['championName'])
-            summoner.__setattr__(f'game{i + 1}Kills', participant['kills'])
-            summoner.__setattr__(f'game{i + 1}Deaths', participant['deaths'])
-            summoner.__setattr__(f'game{i + 1}Assists', participant['assists'])
-            summoner.__setattr__(f'game{i + 1}DamageDealtToChampions', participant['totalDamageDealtToChampions'])
-            summoner.__setattr__(f'game{i + 1}Win', participant['win'])
-            summoner.__setattr__(f'game{i + 1}Remake', participant['gameEndedInEarlySurrender'])
-
-        # FIX NAME CHANGE
-        if i == 0 and participant['puuid'] == summoner.puuid:
-            gameName = participant['riotIdGameName'] + '#' + participant['riotIdTagline']
-            savedName = summoner.fullName
-
-            if gameName != savedName and gameName != "#":
-                summoner.fullName = gameName
-                summoner.tagline = participant['riotIdTagline']
-                summoner.name = participant['riotIdGameName']
-                print(f"{savedName} has changed their name to {gameName}")
-                data["summoners"][gameName] = data["summoners"].pop(savedName)
-                writeToJsonFile("data.json", data)
-
-    # Print MVP
-    # print(f"MVP: {mvpPuuid}")
-
-    if mvpPuuid == summoner.puuid:
-        summoner.__setattr__(f'game{i + 1}Mvp', True)
-    else:
-        summoner.__setattr__(f'game{i + 1}Mvp', False)
+# def fetchMatchData(i, summoner, data, matchId):
+#     mvpPuuid = None
+#     maxZScore = float('-inf')
+#
+#     summoner.__setattr__(f'game{i + 1}GameLength', data["matchData"][matchId]["info"]["gameDuration"])
+#
+#     # Calculate mean and std for each statistic
+#     meanStdDict = {stat: calculateMeanAndStd(data, matchId, stat) for stat in statisticsForMvp}
+#
+#     for participant in data["matchData"][matchId]["info"]['participants']:
+#         playerPuuid = participant['puuid']
+#         zScores = {}
+#         for stat, (mean, std) in meanStdDict.items():
+#             if stat in participant['challenges']:
+#                 originalValue = participant['challenges'][stat]
+#             elif stat in participant:
+#                 originalValue = participant[stat]
+#             else:
+#                 originalValue = 0  # or any default value you prefer if the statistic is missing
+#
+#             # Calculate the Z-score using the multiplier from statisticsForMvp
+#             zScores[stat] = calculateZScore(originalValue, statisticsForMvp[stat], mean, std)
+#
+#         totalZScore = sum(zScores.values())
+#         if participant['puuid'] == summoner.puuid:
+#             summoner.__setattr__(f'game{i + 1}MvpScore', totalZScore)
+#
+#         # MVP
+#         if totalZScore > maxZScore:
+#             maxZScore = totalZScore
+#             mvpPuuid = playerPuuid
+#
+#         if participant['puuid'] == summoner.puuid:
+#             summoner.__setattr__(f'game{i + 1}Champion', participant['championName'])
+#             summoner.__setattr__(f'game{i + 1}Kills', participant['kills'])
+#             summoner.__setattr__(f'game{i + 1}Deaths', participant['deaths'])
+#             summoner.__setattr__(f'game{i + 1}Assists', participant['assists'])
+#             summoner.__setattr__(f'game{i + 1}DamageDealtToChampions', participant['totalDamageDealtToChampions'])
+#             summoner.__setattr__(f'game{i + 1}Win', participant['win'])
+#             summoner.__setattr__(f'game{i + 1}Remake', participant['gameEndedInEarlySurrender'])
+#
+#         # FIX NAME CHANGE
+#         if i == 0 and participant['puuid'] == summoner.puuid:
+#             gameName = participant['riotIdGameName'] + '#' + participant['riotIdTagline']
+#             savedName = summoner.fullName
+#
+#             if gameName != savedName and gameName != "#":
+#                 summoner.fullName = gameName
+#                 summoner.tagline = participant['riotIdTagline']
+#                 summoner.name = participant['riotIdGameName']
+#                 print(f"{savedName} has changed their name to {gameName}")
+#                 data["summoners"][gameName] = data["summoners"].pop(savedName)
+#                 writeToJsonFile("data.json", data)
+#
+#     # Print MVP
+#     # print(f"MVP: {mvpPuuid}")
+#
+#     if mvpPuuid == summoner.puuid:
+#         summoner.__setattr__(f'game{i + 1}Mvp', True)
+#     else:
+#         summoner.__setattr__(f'game{i + 1}Mvp', False)
 
 
 def fetchAllSummonerData(force, daily):
@@ -256,23 +256,16 @@ def fetchAllSummonerData(force, daily):
         summoner.region = jsonData["summoners"][summonerName]["region"]
         # print(f'Fetching {summoner.fullName} rank data')
         try:
-            riotApiData = requests.get(f'https://{summoner.platform}.api.riotgames.com/lol/league/v4/entries/by-summoner/{summoner.id}?api_key={riotApKey}').json()
+            riotApiData = requests.get(f'https://{summoner.platform}.api.riotgames.com/tft/league/v1/entries/by-summoner/{summoner.id}?api_key={riotApKey}').json()
 
             for data in riotApiData:
-                if data['queueType'] == 'RANKED_SOLO_5x5':
+                if data['queueType'] == 'RANKED_TFT':
                     summoner.tier = data['tier']
                     summoner.rank = data['rank']
                     summoner.leaguePoints = data['leaguePoints']
                     summoner.wins = data['wins']
                     summoner.losses = data['losses']
                     summoner.hotStreak = data['hotStreak']
-
-                    if 'miniSeries' in data:
-                        summoner.series = True
-                        summoner.seriesWins = data['miniSeries']['wins']
-                        summoner.seriesLosses = data['miniSeries']['losses']
-                    else:
-                        summoner.series = False
 
             summoner.previousScore = jsonData["summoners"][summonerName]["score"]
             summoner.score = Rank.calculateScore(summoner.tier, summoner.rank, summoner.leaguePoints)
@@ -358,40 +351,40 @@ def fetchAllSummonerData(force, daily):
                         summoner.rank = index
                         break
 
-        for summoner in summoners:
-            # solo 420 flex 440
-            riotApiData = requests.get(f'https://{summoner.region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{summoner.puuid}/ids?queue=420&start=0&count=5&api_key={riotApKey}').json()
-            for i, matchId in enumerate(riotApiData):
-                allMatchesIds.append(matchId)
-                if matchId in jsonData["matchData"]:
-                    # print(f"Found {matchId} in json")
-                    fetchMatchData(i, summoner, jsonData, matchId)
-                else:
-                    # print(f'Fetching {matchId}')
-                    success = False
-                    matchData = None
-                    while not success:
-                        response = requests.get(f'https://{summoner.region}.api.riotgames.com/lol/match/v5/matches/{matchId}?api_key={riotApKey}')
-                        if response.status_code == 200:
-                            matchData = response.json()
-                            success = True
-                        else:
-                            print("No match data, trying again in 125 seconds")
-                            time.sleep(125)
+        # for summoner in summoners:
+        #     # solo 420 flex 440
+        #     riotApiData = requests.get(f'https://{summoner.region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{summoner.puuid}/ids?queue=420&start=0&count=5&api_key={riotApKey}').json()
+        #     for i, matchId in enumerate(riotApiData):
+        #         allMatchesIds.append(matchId)
+        #         if matchId in jsonData["matchData"]:
+        #             # print(f"Found {matchId} in json")
+        #             fetchMatchData(i, summoner, jsonData, matchId)
+        #         else:
+        #             # print(f'Fetching {matchId}')
+        #             success = False
+        #             matchData = None
+        #             while not success:
+        #                 response = requests.get(f'https://{summoner.region}.api.riotgames.com/lol/match/v5/matches/{matchId}?api_key={riotApKey}')
+        #                 if response.status_code == 200:
+        #                     matchData = response.json()
+        #                     success = True
+        #                 else:
+        #                     print("No match data, trying again in 125 seconds")
+        #                     time.sleep(125)
+        #
+        #             jsonData["matchData"][matchId] = matchData
+        #
+        #             fetchMatchData(i, summoner, jsonData, matchId)
+        #
+        #     summonersList.append(summoner)
 
-                    jsonData["matchData"][matchId] = matchData
-
-                    fetchMatchData(i, summoner, jsonData, matchId)
-
-            summonersList.append(summoner)
-
-        # give crown to the best recent 5 games
-        for summoner in summoners:
-            summoner.MvpScoreTotal = summoner.game1MvpScore + summoner.game2MvpScore + summoner.game3MvpScore + summoner.game4MvpScore + summoner.game5MvpScore
-            # print(f"{summoner.name}, Total: {summoner.MvpScoreTotal}, Game 1: {summoner.game1MvpScore}, Game 2: {summoner.game2MvpScore}, Game 3: {summoner.game3MvpScore}, Game 4: {summoner.game4MvpScore}, Game 5: {summoner.game5MvpScore}")
-
-        playerWithHighestScore = max(summoners, key=lambda x: x.MvpScoreTotal)
-        playerWithHighestScore.hasCrown = True
+        # # give crown to the best recent 5 games
+        # for summoner in summoners:
+        #     summoner.MvpScoreTotal = summoner.game1MvpScore + summoner.game2MvpScore + summoner.game3MvpScore + summoner.game4MvpScore + summoner.game5MvpScore
+        #     # print(f"{summoner.name}, Total: {summoner.MvpScoreTotal}, Game 1: {summoner.game1MvpScore}, Game 2: {summoner.game2MvpScore}, Game 3: {summoner.game3MvpScore}, Game 4: {summoner.game4MvpScore}, Game 5: {summoner.game5MvpScore}")
+        #
+        # playerWithHighestScore = max(summoners, key=lambda x: x.MvpScoreTotal)
+        # playerWithHighestScore.hasCrown = True
 
         # clean up matchData
         keysToDelete = []

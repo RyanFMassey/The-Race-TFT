@@ -1,5 +1,8 @@
-.idea/*
+/.idea
 /src/.env
+/src/__pycache__
 /src/data.json
+/src/test-data.json
+/src/match-data.json
 /src/Daily Rank list.png
 /src/Rank list.png

@@ -2,8 +2,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 import os
 import requests
-from PIL import ImageFont
-from PIL import Image, ImageDraw
+
 
 from .commonUtils import version, Rank
 
@@ -123,17 +122,7 @@ def drawFileImage(canvas, file, x, y, w=0, opacity=1.0, cropTop=None, cropBottom
     canvas.paste(img, (x, y), img)
 
 
-def drawTextCentered(canvas, text, x, y, font, colour=((255, 255, 255))):
-    # Get the size of the text using the provided font
-    draw = ImageDraw.Draw(canvas)
-    textBbox = draw.textbbox((x, y), text, font=font)
 
-    # Calculate the x and y positions to center the text
-    centerX = x - (textBbox[2] - textBbox[0]) / 2
-    centerY = y - (textBbox[3] - textBbox[1]) / 2
-
-    # Draw the text at the center position with the specified opacity
-    draw.text((centerX, centerY), text, colour, font=font)
 
 
 def formatTime(seconds):
