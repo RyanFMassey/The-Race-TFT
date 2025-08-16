@@ -139,14 +139,19 @@ if __name__ == "__main__":
             new_matches = request_latest_match_data(new_match_ids)
             latest_matches = latest_matches + new_matches
 
-            summoners.sort(key=lambda s: (Rank.tierOrder[s.tier], Rank.rankOrder[s.rank], s.lp, int(s.wins / (s.wins + s.losses) * 100)), reverse=True)
+            latest_summoners = []
+            for summoner in summoners:
+                latest_summoner = get_summoner_info(summoner.puuid, summoner.name, summoner.tagline)
+                latest_summoners.append(latest_summoner)
+
+            latest_summoners.sort(key=lambda s: (Rank.tierOrder[s.tier], Rank.rankOrder[s.rank], s.lp, int(s.wins / (s.wins + s.losses) * 100)), reverse=True)
 
             # Set the 'position' attribute to their index in the list (1-based index)
 
             #TODO currently load_match_data requests each summoners recent matches, so does get_recent_match_ids in the summoners loop, should only need one request
             match_lookup = {m.match_id: m for m in latest_matches}
 
-            for idx, summoner in enumerate(summoners, start=1):
+            for idx, summoner in enumerate(latest_summoners, start=1):
                 summoner.position = idx
                 summoner.recent_match_ids = get_recent_match_ids(summoner.puuid)
                 print(summoner.name, summoner.recent_match_ids)
@@ -166,9 +171,9 @@ if __name__ == "__main__":
                 summoner.recent_placements = placements
                 print(f"{summoner.name} recent placements: {summoner.recent_placements}")
 
-            generate_image(summoners, summoners)
+            generate_image(summoners, latest_summoners)
 
-            write_json_file(data_json_file, [s.to_dict() for s in summoners])
+            write_json_file(data_json_file, [s.to_dict() for s in latest_summoners])
             write_json_file(matches_json_file, [m.to_dict() for m in latest_matches])
 
 
