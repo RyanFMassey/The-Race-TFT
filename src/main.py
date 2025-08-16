@@ -18,6 +18,32 @@ data_json_file = "test_data.json"
 # data_json_file = "data.json"
 
 
+def request_latest_match_ids(puuids):
+    print("Getting match ids for:")
+    print(puuids)
+
+    latest_match_ids = []
+    for puuid in puuids:
+        latest_match_ids = latest_match_ids + get_recent_match_ids(puuid)
+    print("Got recent matches:")
+    print(latest_match_ids)
+    return latest_match_ids
+
+def load_match_data_from_file():
+    saved_matches = [Match.from_dict(m) for m in open_json_file(matches_json_file)]
+    if saved_matches is None:
+        saved_matches = []
+    return saved_matches
+
+
+def request_latest_match_data(new_match_ids):
+    match_data = []
+    for match_id in new_match_ids:
+        match_data.append(get_match_data(match_id))
+
+    return match_data
+
+
 def load_match_data(puuids):
     saved_matches = [Match.from_dict(m) for m in open_json_file(matches_json_file)]
     if saved_matches is None:
@@ -47,75 +73,103 @@ def load_match_data(puuids):
     return latest_matches
 
 
+def add_summoner(summoner_name):
+    summoners = [Summoner.from_dict(s) for s in open_json_file(data_json_file)]
+    name = summoner_name.split("#")[0]
+    tag = summoner_name.split("#")[1]
+
+    if any(s.name + "#" + s.tagline == summoner_name for s in summoners):
+        return "Summoner already exists."
+    else:
+        puuid = get_puid(name, tag)
+        summoner = get_summoner_info(puuid, summoner_name, tag)
+        summoners.append(summoner)
+        write_json_file(data_json_file, [s.to_dict() for s in latest_summoners])
+        return "Summoner added."
+
+
+def remove_summoner(summoner_name):
+    summoners = [Summoner.from_dict(s) for s in open_json_file(data_json_file)]
+    name = summoner_name.split("#")[0]
+    tag = summoner_name.split("#")[1]
+
+    if any(s.name + "#" + s.tagline == summoner_name for s in summoners):
+        for summoner in summoners:
+            if summoner.name == name and summoner.tagline == tag:
+                summoners.remove(summoner)
+                break
+        write_json_file(data_json_file, [s.to_dict() for s in latest_summoners])
+        return "Summoner deleted."
+
+    else:
+        return "Summoner already exists."
+
 
 if __name__ == "__main__":
 
 
     print("Starting...")
 
-
-
-    summoner_names = ["Fallon#EUW", "Yuudachí#EUW", "jenks#101", "Dusty#ZZZ", "Doug#WW1T", "HAMOHBAR#EUW", "devyswette#EUW"]
-
     summoners = [Summoner.from_dict(s) for s in open_json_file(data_json_file)]
-    if summoners is None:
-        summoners = []
+    if summoners is not None:
 
-    latest_summoners = []
+        latest_match_ids = request_latest_match_ids([s.puuid for s in summoners])
+        stored_matches = load_match_data_from_file()
+        stored_match_ids = [match.match_id for match in stored_matches]
 
-    for game_name in summoner_names:
-        puuid = None
-        summoner_name = game_name.split("#")[0]
-        tag = game_name.split("#")[1]
-        if not any(s.name + "#" + s.tagline == game_name for s in summoners):
-            puuid = get_puid(summoner_name, tag)
+        print("Stored match ids")
+        print(stored_match_ids)
+        print()
+        print("Latest match ids")
+        print(latest_match_ids)
+
+        new_match_ids = set(latest_match_ids) - set(stored_match_ids)
+        print("New match ids")
+        print(new_match_ids)
+
+        if not new_match_ids:
+            print("No new matches")
+
         else:
-            puuid = next((s for s in summoners if s.name + "#" + s.tagline == game_name), None).puuid
+            print("New matches, continuing")
+            old_match_ids = set(stored_match_ids) - set(latest_match_ids)
+            latest_matches = []
+            relevant_saved_matches = [match for match in stored_matches if match.match_id not in old_match_ids]
+            latest_matches = latest_matches + relevant_saved_matches
+            new_matches = request_latest_match_data(new_match_ids)
+            latest_matches = latest_matches + new_matches
 
-        summoner = get_summoner_info(puuid, summoner_name, tag)
-        latest_summoners.append(summoner)
+            summoners.sort(key=lambda s: (Rank.tierOrder[s.tier], Rank.rankOrder[s.rank], s.lp, int(s.wins / (s.wins + s.losses) * 100)), reverse=True)
 
-    latest_summoners.sort(key=lambda s: (Rank.tierOrder[s.tier], Rank.rankOrder[s.rank], s.lp, int(s.wins / (s.wins + s.losses) * 100)), reverse=True)
+            # Set the 'position' attribute to their index in the list (1-based index)
 
-    # Set the 'position' attribute to their index in the list (1-based index)
+            #TODO currently load_match_data requests each summoners recent matches, so does get_recent_match_ids in the summoners loop, should only need one request
+            match_lookup = {m.match_id: m for m in latest_matches}
 
-    #TODO currently load_match_data requests each summoners recent matches, so does get_recent_match_ids in the summoners loop, should only need one request
-    latest_matches = load_match_data([s.puuid for s in latest_summoners])
-    print(latest_matches)
-    match_lookup = {m.match_id: m for m in latest_matches}
+            for idx, summoner in enumerate(summoners, start=1):
+                summoner.position = idx
+                summoner.recent_match_ids = get_recent_match_ids(summoner.puuid)
+                print(summoner.name, summoner.recent_match_ids)
 
-    for idx, summoner in enumerate(latest_summoners, start=1):
-        summoner.position = idx
-        summoner.recent_match_ids = get_recent_match_ids(summoner.puuid)
-        print(summoner.name, summoner.recent_match_ids)
+                placements = []
+                for match_id in summoner.recent_match_ids:
+                    match_data = match_lookup.get(match_id)
+                    if not match_data:
+                        continue
 
-        placements = []
-        for match_id in summoner.recent_match_ids:
-            match_data = match_lookup.get(match_id)
-            if not match_data:
-                continue
+                    player_data = next((p for p in match_data.players if p.puuid == summoner.puuid), None)
+                    if not player_data:
+                        continue
 
-            player_data = next((p for p in match_data.players if p.puuid == summoner.puuid), None)
-            if not player_data:
-                continue
+                    placements.append(player_data.placement)
 
-            placements.append(player_data.placement)
+                summoner.recent_placements = placements
+                print(f"{summoner.name} recent placements: {summoner.recent_placements}")
 
+            generate_image(summoners, summoners)
 
-        summoner.recent_placements = placements
-        print(f"{summoner.name} recent placements: {summoner.recent_placements}")
-
-
-
-
-
-
-    # print(latest_matches)
-
-
-    generate_image(summoners, latest_summoners)
-
-    write_json_file(data_json_file, [s.to_dict() for s in latest_summoners])
+            write_json_file(data_json_file, [s.to_dict() for s in summoners])
+            write_json_file(matches_json_file, [m.to_dict() for m in latest_matches])
 
 
     #

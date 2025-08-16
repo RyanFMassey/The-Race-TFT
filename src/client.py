@@ -2,7 +2,7 @@ import urllib.parse
 import requests
 from models import Summoner, Match, Player, Trait
 
-api_key = "RGAPI-868dbd9e-853d-4828-b60b-b7c7c116a249"
+api_key = "RGAPI-af50428a-066f-4f48-88b3-ba2fc7d3d4b3"
 
 
 def get_puid(summoner_name, tag):
@@ -42,12 +42,8 @@ def get_recent_match_ids(puuid):
     return data
 
 
-def get_match_data(match_ids):
-    match_data = []
-    for match_id in match_ids:
-        match_data.append(get_match_info_by_id(match_id))
-
-    return match_data
+def get_match_data(match_id):
+    return get_match_info_by_id(match_id)
 
 
 def get_match_info_by_id(match_id):
