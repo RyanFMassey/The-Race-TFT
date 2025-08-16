@@ -84,7 +84,7 @@ def add_summoner(summoner_name):
         puuid = get_puid(name, tag)
         summoner = get_summoner_info(puuid, summoner_name, tag)
         summoners.append(summoner)
-        write_json_file(data_json_file, [s.to_dict() for s in latest_summoners])
+        write_json_file(data_json_file, [s.to_dict() for s in summoners])
         return "Summoner added."
 
 
@@ -98,7 +98,7 @@ def remove_summoner(summoner_name):
             if summoner.name == name and summoner.tagline == tag:
                 summoners.remove(summoner)
                 break
-        write_json_file(data_json_file, [s.to_dict() for s in latest_summoners])
+        write_json_file(data_json_file, [s.to_dict() for s in summoners])
         return "Summoner deleted."
 
     else:
