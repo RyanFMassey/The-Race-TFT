@@ -26,7 +26,6 @@ def draw_position_square(draw, x, y, position, font):
     - else → grey
     """
 
-
     position_colors = {
         1: (17, 178, 136),
         2: (32, 122, 199),
@@ -59,7 +58,6 @@ def draw_position_square(draw, x, y, position, font):
 
     # Draw text
     draw.text((text_x, text_y), text, fill=text_color, font=font)
-
 
 
 def generate_image(old_summoners, summoners):
@@ -130,7 +128,6 @@ def generate_image(old_summoners, summoners):
 
         # Draw crown
         if summoner.puuid == crown_holder.puuid:
-            print("Drawing crown for summoner:", summoner.name)
             crown = Image.open(f"Imgs/crown.png")
             canvas.paste(crown, (x + 157, y + 15), crown)
 
@@ -149,7 +146,7 @@ def generate_image(old_summoners, summoners):
                 else:
                     textBbox = fontName.getbbox(f"{delta_rank_score}")
                     textWidth = textBbox[2] - textBbox[0]
-                    xCentered = x + 660 - textWidth // 2
+                    xCentered = x + 650 - textWidth // 2
                     draw.text((xCentered, y + 40), f"{delta_rank_score}", (200, 50, 50), font=fontName)
 
         if (old_summoner is not None) and (old_summoner.position != summoner.position):
@@ -186,38 +183,23 @@ def generate_image(old_summoners, summoners):
                            fontTier)
 
         # Draw recent placements
-        draw_position_square(draw, x + 710, y - 130, summoner.recent_placements[0], font_leaderboard_rank)
-        draw_position_square(draw, x + 820, y - 130, summoner.recent_placements[1], font_leaderboard_rank)
-        draw_position_square(draw, x + 930, y - 130, summoner.recent_placements[2], font_leaderboard_rank)
-        draw_position_square(draw, x + 1040, y - 130, summoner.recent_placements[3], font_leaderboard_rank)
-        draw_position_square(draw, x + 1150, y - 130, summoner.recent_placements[4], font_leaderboard_rank)
-        draw_position_square(draw, x + 1260, y - 130, summoner.recent_placements[5], font_leaderboard_rank)
-        draw_position_square(draw, x + 1370, y - 130, summoner.recent_placements[6], font_leaderboard_rank)
-        draw_position_square(draw, x + 1480, y - 130, summoner.recent_placements[7], font_leaderboard_rank)
-        draw_position_square(draw, x + 1590, y - 130, summoner.recent_placements[8], font_leaderboard_rank)
-        draw_position_square(draw, x + 1700, y - 130, summoner.recent_placements[9], font_leaderboard_rank)
+        for j in range(len(summoner.recent_placements)):
+            draw_position_square(draw, x + ((j * 110) + 710), y - 130, summoner.recent_placements[j], font_leaderboard_rank)
 
         # Check last 3 placements for streaks
         recent_three = summoner.recent_placements[:3]
 
         # Win streak (all top 4)
         if len(recent_three) == 3 and all(p <= 4 for p in recent_three):
-            print(summoner.name, "is on a win streak")
             taglineLength = draw.textlength(f"#{summoner.tagline}", font=fontTagline)
             canvas.paste(hotStreakIcon, (x + 245 + int(nameLength + taglineLength), y - 122), hotStreakIcon)
-            print(x + 245 + int(nameLength + taglineLength), y + 50)
 
         # Loss streak (all bottom 4)
         elif len(recent_three) == 3 and all(p >= 5 for p in recent_three):
-            print(summoner.name, "is on a loss streak")
             taglineLength = draw.textlength(f"#{summoner.tagline}", font=fontTagline)
             canvas.paste(coldStreakIcon, (x + 245 + int(nameLength + taglineLength), y - 122), coldStreakIcon)
 
         # Draw average placement
         draw_text_centered(canvas, f"{round(sum(summoner.recent_placements[:10]) / 10, 1)}", x + 1860, y - 85, font_average_placement)
 
-
-
-
-    # Save image to file and show it
     canvas.save('Rank list.png')
